@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <title>Modern Black Hole 3D</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #ui { position: absolute; bottom: 20px; left: 20px; color: rgba(255,255,255,0.7); pointer-events: none; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h1>Gargantua Sim</h1>
+        <p>Miš za rotaciju • Skrol za zoom • Shift + Miš za pan</p>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Postavka scene
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
+        camera.position.set(40, 15, 60);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.toneMapping = THREE.ReinhardToneMapping;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // 1. ZVEZDANA POZADINA (Duboki svemir)
+        function createStars() {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            for (let i = 0; i < 15000; i++) {
+                vertices.push((Math.random() - 0.5) * 3000, (Math.random() - 0.5) * 3000, (Math.random() - 0.5) * 3000);
+            }
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            return new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, transparent: true, opacity: 0.8 }));
+        }
+        scene.add(createStars());
+
+        // 2. HORIZONT DOGAĐAJA (Crna rupa)
+        const hole = new THREE.Mesh(
+            new THREE.SphereGeometry(12, 64, 64),
+            new THREE.MeshBasicMaterial({ color: 0x000000 })
+        );
+        scene.add(hole);
+
+        // 3. MODERN ACCRETION DISK (Shader-like particles)
+        const particleCount = 40000;
+        const positions = [];
+        const colors = [];
+        const sizes = [];
+
+        const colorInside = new THREE.Color("#ffaa00"); // Hot orange
+        const colorOutside = new THREE.Color("#551100"); // Dark red
+
+        for (let i = 0; i < particleCount; i++) {
+            const r = 18 + Math.random() * 40;
+            const angle = Math.random() * Math.PI * 2;
+            const x = r * Math.cos(angle);
+            const z = r * Math.sin(angle);
+            const y = (Math.random() - 0.5) * (2.0 / (r * 0.1)); // Disk je tanji što je dalje
+
+            positions.push(x, y, z);
+
+            // Bojenje na osnovu distance (vrelije unutra)
+            const mixedColor = colorInside.clone().lerp(colorOutside, (r - 18) / 40);
+            colors.push(mixedColor.r, mixedColor.g, mixedColor.b);
+            
+            sizes.push(Math.random() * 1.5);
+        }
+
+        const diskGeo = new THREE.BufferGeometry();
+        diskGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        diskGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+        const diskMat = new THREE.PointsMaterial({
+            size: 0.15,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending // Pravi "glow" efekat gde se čestice preklapaju
+        });
+
+        const disk = new THREE.Points(diskGeo, diskMat);
+        scene.add(disk);
+
+        // 4. RELATIVISTIČKI MLAZ (Relativistic Jets)
+        function createJet(isTop) {
+            const jetGeo = new THREE.CylinderGeometry(0.5, 8, 200, 32, 1, true);
+            const jetMat = new THREE.MeshBasicMaterial({
+                color: 0x4488ff,
+                transparent: true,
+                opacity: 0.1,
+                side: THREE.DoubleSide
+            });
+            const jet = new THREE.Mesh(jetGeo, jetMat);
+            jet.position.y = isTop ? 110 : -110;
+            if (!isTop) jet.rotation.x = Math.PI;
+            return jet;
+        }
+        scene.add(createJet(true));
+        scene.add(createJet(false));
+
+        // Animacija
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            disk.rotation.y += 0.0015;
+            
+            // Suptilno pulsiranje diska
+            const time = Date.now() * 0.001;
+            disk.scale.y = 1 + Math.sin(time) * 0.05;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
