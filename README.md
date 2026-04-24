@@ -40,5 +40,7 @@ An interactive, high-performance 3D scientific visualization of a supermassive b
 
 Inspired by the work of Kip Thorne and the VFX team at Double Negative. Built with ❤️ using the Three.js library.
 
+Site is live at https://grujo85.github.io/black_hole_simulation/
+
 
 
